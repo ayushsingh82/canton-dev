@@ -13,6 +13,12 @@ The wallet SDK can now send Utility Registry tokens (pre-approval work currently
 
 ---
 
+## Motivation
+
+The wallet team is building Utility Registry token pre-approvals now. The moment that lands, three gaps become the next real problem for any wallet team that uses it: silent pre-approval expiry, no unified history across registries, and no interoperability on payment requests. Each gap has been raised in community channels by builders hitting it. Addressing them as a package means the ecosystem gets payment lifecycle completeness once rather than each wallet team solving each piece separately.
+
+---
+
 ## Specification
 
 ### 1. Objective
@@ -98,12 +104,6 @@ Project duration is under 6 months. If the timeline extends beyond 6 months due 
 ## Maintenance and Sustainability
 
 The SDK contributions are maintained inside `canton-network/wallet` under its existing process. The payment request CIP is maintained as a Canton standard. Ayush Singh maintains the reference integration and tracks token-standard changes including the V2 token standard.
-
----
-
-## Motivation
-
-The wallet team is building Utility Registry token pre-approvals now. The moment that lands, three gaps become the next real problem for any wallet team that uses it: silent pre-approval expiry, no unified history across registries, and no interoperability on payment requests. Each gap has been raised in community channels by builders hitting it. Addressing them as a package means the ecosystem gets payment lifecycle completeness once rather than each wallet team solving each piece separately.
 
 ---
 
