@@ -9,7 +9,7 @@
 
 ## Abstract
 
-The wallet SDK can now send Utility Registry tokens (pre-approval work currently in progress). Three practical problems appear immediately once that lands: pre-approvals expire without warning, there is no unified read path for transaction history across registries, and there is no standard way for one Canton wallet to request a payment from another. This proposal addresses all three as a single coherent scope — the lifecycle around a token transfer, not just the transfer itself.
+The pre-approval work for Utility Registry tokens is underway in the wallet SDK. Once it lands, three problems show up immediately for any wallet team using it. Pre-approvals expire and nothing tells you. If your wallet touches more than one registry, there is no single place to see transaction history. And there is no shared format for one wallet to request a payment from another, so every app invents its own. This proposal covers all three — they sit in the same part of the SDK and are straightforward to ship together.
 
 ---
 
