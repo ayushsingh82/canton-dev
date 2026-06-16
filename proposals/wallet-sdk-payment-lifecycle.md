@@ -166,6 +166,9 @@ Acceptance is based on real SDK usage, not on artifact delivery alone.
 
 Payment for each milestone is triggered upon committee acceptance of that milestone's deliverables.
 
+### Note on Audit Cost
+The 125,000 CC allocated to Milestone 4 covers the cost of engaging an independent third-party security auditor. The Canton Foundation has covered external audit costs for wallet-critical proposals in the past and is welcome to do so here as well — if the Foundation prefers to fund the audit directly rather than through this milestone, the M4 allocation can be removed and the remaining 475,000 CC covers Milestones 1–3 in full.
+
 ### Volatility Stipulation
 Project duration is under 6 months. If the timeline extends beyond 6 months due to committee-requested scope changes, remaining milestones will be renegotiated to account for CC price movement.
 
