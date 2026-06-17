@@ -94,19 +94,24 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 
 ---
 
-### Milestone 4 — External Security Audit
+### Milestone 4a — External Auditor Fee (Pass-Through)
 - **Duration:** Weeks 20–23
-- **Deliverables:** Full audit of all SDK additions by an independent third-party security firm; remediation of all critical and high findings; published audit report.
+- **Deliverables:** Engagement of an independent third-party security firm to audit all SDK additions; published audit report.
+
+This is a direct pass-through to the external auditor. Estimated cost: USD 25,000–30,000, billed in CC at spot rate at time of engagement. This line is not development time — it is the auditor's fee paid to a firm outside this proposal.
+
+### Milestone 4b — Developer Remediation
+- **Duration:** Weeks 20–23 (concurrent with audit)
+- **Deliverables:** Remediation of all critical and high findings; re-test sign-off with auditor.
 
 | Task | Hours |
 |---|---|
 | Audit scope document preparation and briefing | 5h |
-| External auditor engagement and coordination | 5h |
-| Remediation of critical and high findings | 20h |
+| Coordination with auditor during review | 5h |
+| Remediation of critical and high findings | 15h |
 | Remediation of medium findings | 10h |
 | Re-test and sign-off with auditor | 5h |
-| Final audit report publication | 5h |
-| **Milestone 4 Total** | **50h** |
+| **Milestone 4b Total** | **40h** |
 
 ---
 
@@ -133,7 +138,8 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 | 23 | M4 | Re-test, final report publication — **M4 delivery** |
 
 **Total project duration:** 23 weeks
-**Total estimated hours:** 325h
+**Total build hours (M1–M3):** 275h at 2,000 CC/h
+**Total remediation hours (M4b):** 40h at 2,000 CC/h
 
 ---
 
@@ -152,22 +158,31 @@ Acceptance is based on real SDK usage, not on artifact delivery alone.
 
 ## Funding
 
-**Total Funding Request:** 600,000 CC
+**Rate:** 2,000 CC/h (consistent across all development milestones)
 
-### Payment Breakdown by Milestone
+### Build Budget (M1–M3)
 
-| Milestone | Deliverable | Hours | CC |
-|---|---|---|---|
-| M1 — Pre-approval expiry management | SDK helpers + upstream PR | 80h | 150,000 CC |
-| M2 — Multi-registry transfer history | Unified history + adapters | 95h | 150,000 CC |
-| M3 — Payment request format | CIP + SDK + reference integration | 100h | 175,000 CC |
-| M4 — External security audit | Audit + remediation + report | 50h | 125,000 CC |
-| **Total** | | **325h** | **600,000 CC** |
+| Milestone | Deliverable | Hours | Rate | CC |
+|---|---|---|---|---|
+| M1 — Pre-approval expiry management | SDK helpers + upstream PR | 80h | 2,000 CC/h | 160,000 CC |
+| M2 — Multi-registry transfer history | Unified history + adapters | 95h | 2,000 CC/h | 190,000 CC |
+| M3 — Payment request format | CIP + SDK + reference integration | 100h | 2,000 CC/h | 200,000 CC |
+| **Build Total** | | **275h** | | **550,000 CC** |
+
+### Audit Budget (M4 — additional, on top of build)
+
+| Line | Description | CC |
+|---|---|---|
+| M4a — External auditor fee | Pass-through to independent security firm | USD 25,000–30,000 in CC at spot rate |
+| M4b — Developer remediation | 40h × 2,000 CC/h | 80,000 CC |
+| **Audit Total** | | **80,000 CC + auditor fee** |
+
+**Total Funding Request: 630,000 CC + auditor pass-through**
 
 Payment for each milestone is triggered upon committee acceptance of that milestone's deliverables.
 
 ### Note on Audit Cost
-The 125,000 CC allocated to Milestone 4 covers the cost of engaging an independent third-party security auditor. The Canton Foundation has covered external audit costs for wallet-critical proposals in the past and is welcome to do so here as well — if the Foundation prefers to fund the audit directly rather than through this milestone, the M4 allocation can be removed and the remaining 475,000 CC covers Milestones 1–3 in full.
+The Canton Foundation has covered external audit costs for wallet-critical proposals in the past and is welcome to do so here as well. If the Foundation prefers to fund M4a (the auditor fee) directly rather than as a pass-through, the build budget of 550,000 CC and developer remediation of 80,000 CC remain unchanged.
 
 ### Volatility Stipulation
 Project duration is under 6 months. If the timeline extends beyond 6 months due to committee-requested scope changes, remaining milestones will be renegotiated to account for CC price movement.
