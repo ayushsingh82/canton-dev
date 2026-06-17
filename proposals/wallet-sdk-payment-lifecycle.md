@@ -204,6 +204,32 @@ The SDK contributions are maintained inside `canton-network/wallet` under its ex
 
 ---
 
+## Team
+
+**Ayush Singh** — Full Stack Blockchain Engineer and DevRel
+GitHub: https://github.com/ayushsingh82 | Portfolio: https://0xayush.vercel.app/
+
+3+ years building across payments, stablecoins, account abstraction, DeFi, privacy infrastructure, and cross-chain systems. 20+ Web3 hackathon wins and multiple ecosystem grants across Ethereum, Solana, NEAR, Canton, EigenLayer, Stellar, and others.
+
+- **Canton Capital** — Private fund operations platform on Canton Network with proposal creation, voting, execution, and real-time treasury analytics built in Daml.
+https://github.com/ayushsingh82/Canton-Capital
+
+- **CantonPay** — Confidential payroll infrastructure on Canton using Daml, enabling employer-employee payroll workflows with privacy and compliance.
+https://github.com/ayushsingh82/CantonPay
+
+- **IncoPay** — Private x402 payment infrastructure where users sign once and make multiple confidential payment requests.
+https://x.com/IncoPayment
+
+- **Nexchange** — Cross-chain staking and intent-based infrastructure on NEAR.
+https://x.com/nexchange_near
+
+- **AshWallet** — Anonymous wallet generation using chain signatures, deriving addresses on Solana, NEAR, and EVM from a single NEAR account with ZCash swap support via NEAR intents.
+https://github.com/ayushsingh82/AshWallet
+
+Also worked with GOAT Network, NEAR DevHub, Router Protocol, Oraichain, and Triplora.
+
+---
+
 ## Motivation
 
 The wallet team is building Utility Registry token pre-approvals now. The moment that lands, three gaps become the next real problem for any wallet team that uses it: silent pre-approval expiry, no unified history across registries, and no interoperability on payment requests. Each gap has been raised in community channels by builders hitting it. Addressing them as a package means the ecosystem gets payment lifecycle completeness once rather than each wallet team solving each piece separately.
