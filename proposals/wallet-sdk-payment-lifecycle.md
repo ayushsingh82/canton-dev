@@ -9,7 +9,7 @@
 
 ## Abstract
 
-The wallet SDK can now send Utility Registry tokens (pre-approval work currently in progress). Three practical problems appear immediately once that lands: pre-approvals expire without warning, there is no unified read path for transaction history across registries, and there is no standard way for one Canton wallet to request a payment from another. This proposal addresses all three as a single coherent scope — the lifecycle around a token transfer, not just the transfer itself.
+The wallet SDK can now send Utility Registry tokens (pre-approval work currently in progress). Three practical problems remain once that lands: Canton Coin pre-approvals with a non-default provider party (and Utility Registry token pre-approvals generally) need renewal automation the SDK doesn't provide, the existing unified transaction-history read path lacks per-registry symbol/metadata enrichment, and there is no standard way for one Canton wallet to request a payment from another. This proposal addresses all three as a single coherent scope — the lifecycle around a token transfer, not just the transfer itself.
 
 ---
 
@@ -17,15 +17,15 @@ The wallet SDK can now send Utility Registry tokens (pre-approval work currently
 
 ### 1. Objective
 
-The work in progress on Utility Registry token pre-approvals closes the send gap. It does not close the gaps around sending. A wallet that sets up a USDCx pre-approval today will fail silently when it expires — the SDK has no surface for tracking expiry or triggering renewal. A wallet that supports multiple registries has to query each one separately and stitch the history together by hand, because the SDK has no unified history read path. And when a merchant or dApp wants to ask a user to send a specific token, there is no Canton equivalent of a payment URI — every app invents a format, so wallets cannot interoperate on incoming payment requests.
+The work in progress on Utility Registry token pre-approvals closes the send gap. It does not close the gaps around sending. Default-provider (validator operator) Canton Coin pre-approvals already auto-renew via validator-app automation, so most Canton Coin wallets never hit silent expiry — but non-default-provider Canton Coin setups, and Utility Registry token pre-approvals generally, still need renewal automation the SDK doesn't provide. Separately, the SDK's `listHoldingTransactions` already returns a registry-agnostic transaction history in one call, but it doesn't carry human-readable per-registry instrument metadata (symbol, display name) alongside it, so a caller still has to fetch that separately per registry and join it by hand. And when a merchant or dApp wants to ask a user to send a specific token, there is no Canton equivalent of a payment URI — every app invents a format, so wallets cannot interoperate on incoming payment requests.
 
 These three gaps are a natural follow-on to the pre-approval work and are best handled together, because they share the same SDK surface area and the same integration tests.
 
 ### 2. Implementation Mechanics
 
-**Pre-approval expiry management.** Add an expiry-aware layer to the pre-approval path. The SDK tracks the expiry timestamp for each pre-approval (Canton Coin and Utility Registry tokens), surfaces a `getExpiringPreapprovals(withinDays)` helper, and provides a `renewPreapproval` call that re-uses the existing factory resolution logic from the pre-approval work. No new protocol; no new contracts. This is a bookkeeping layer over what the pre-approval work already does.
+**Pre-approval expiry management.** Add an expiry-aware layer scoped to the cases that actually lack automatic renewal: non-default-provider Canton Coin pre-approvals, and Utility Registry token pre-approvals. The SDK tracks the expiry timestamp for each, surfaces a `getExpiringPreapprovals(withinDays)` helper, and provides a `renewPreapproval` call that re-uses the existing factory resolution logic from the pre-approval work. No new protocol; no new contracts. This is a bookkeeping layer over what the pre-approval work already does, not a replacement for the validator-operator auto-renewal that already covers default-provider Canton Coin pre-approvals.
 
-**Multi-registry transfer history.** Add a unified history interface that normalises transaction records across Canton Coin and Utility Registry token registries. The adapter per registry maps amounts to the correct decimal places, attaches instrument metadata (symbol, registry ID, instrument ID), and paginates consistently. A caller gets one list regardless of how many registries a user holds tokens in. This proposal implements the full read surface needed for history independently.
+**Multi-registry transfer history enrichment.** `listHoldingTransactions` already reads at the ledger's standardized Token Standard interface level, so it returns a registry-agnostic transaction history in one call, with `instrumentId` per line item and amounts as fixed-point Daml decimals — no per-registry decimal conversion needed. This proposal adds a convenience layer that joins that already-unified stream with per-registry instrument metadata (symbol, display name) fetched via the existing `registriesToAssets` helper, and wraps it with consistent cursor pagination on top of ledger offsets. A caller gets one enriched list regardless of how many registries a user holds tokens in, without hand-joining metadata calls themselves.
 
 **Payment request format.** Define a Canton payment URI format and ship a parser and builder in the SDK. The URI encodes receiver party ID, registry ID, instrument ID, amount, and optional fields (memo, expiry, nonce). Example: `canton:PARTY_ID?registry=REGISTRY_ID&instrument=INSTRUMENT_ID&amount=10.00&memo=invoice-42`. The builder accepts a token type, amount, and party and returns a valid URI. The parser returns a structured object that feeds directly into the transfer path. The spec is published as a short Canton Improvement Proposal.
 
@@ -43,32 +43,32 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 
 ## Milestones and Deliverables
 
-### Milestone 1 — Pre-approval Expiry Management
+### Milestone 1 — Pre-approval Renewal Automation (Non-Default-Provider & Utility Registry)
 - **Duration:** Weeks 1–7
-- **Deliverables:** `getExpiringPreapprovals` helper and `renewPreapproval` call in the SDK token namespace; unit tests; upstream pull request to `canton-network/wallet`.
+- **Deliverables:** `getExpiringPreapprovals` helper and `renewPreapproval` call in the SDK token namespace, scoped to non-default-provider Canton Coin pre-approvals and Utility Registry token pre-approvals; unit tests; upstream pull request to `canton-network/wallet`.
 
 | Task | Hours |
 |---|---|
-| Research existing pre-approval path and expiry logic | 10h |
-| Implement `getExpiringPreapprovals(withinDays)` helper | 20h |
+| Confirm Utility Registry token renewal behavior with registry/wallet team; research non-default-provider path | 10h |
+| Implement `getExpiringPreapprovals(withinDays)` — scoped to non-default-provider Canton Coin + Utility Registry tokens | 20h |
 | Implement `renewPreapproval` call with factory resolution reuse | 20h |
-| Unit tests and edge case coverage | 15h |
+| Unit tests — non-default-provider and Utility Registry edge cases | 15h |
 | Upstream PR preparation and review cycles | 10h |
 | Documentation and inline examples | 5h |
 | **Milestone 1 Total** | **80h** |
 
 ---
 
-### Milestone 2 — Multi-Registry Transfer History
+### Milestone 2 — Multi-Registry Transfer History Enrichment
 - **Duration:** Weeks 8–13
-- **Deliverables:** Unified history interface with per-registry adapters normalising decimals, symbols, and instrument metadata; pagination; upstream pull request.
+- **Deliverables:** Convenience layer joining the existing registry-agnostic `listHoldingTransactions` stream with per-registry instrument metadata (symbol, display name) via `registriesToAssets`; consistent cursor pagination on top of ledger offsets; upstream pull request.
 
 | Task | Hours |
 |---|---|
-| Design unified history interface and adapter pattern | 10h |
-| Implement unified history interface | 25h |
-| Per-registry adapters (decimals, symbols, instrument metadata) | 20h |
-| Pagination implementation with consistent cursor behaviour | 10h |
+| Document existing `listHoldingTransactions` / `registriesToAssets` behavior and design enrichment layer | 10h |
+| Implement metadata-enrichment layer joining transaction stream with per-registry instrument metadata | 25h |
+| Per-registry metadata joins (symbols, display names, instrument IDs) | 20h |
+| Pagination ergonomics on top of existing ledger offsets | 10h |
 | Integration tests against Canton Coin and Utility Registry | 15h |
 | Upstream PR preparation and review cycles | 10h |
 | Documentation and runnable examples | 5h |
@@ -119,15 +119,15 @@ This is a direct pass-through to the external auditor. Estimated cost: USD 25,00
 
 | Week | Milestone | Focus |
 |---|---|---|
-| 1 | M1 | Research existing pre-approval path and expiry logic |
+| 1 | M1 | Confirm Utility Registry renewal behavior; research non-default-provider path |
 | 2–3 | M1 | Implement `getExpiringPreapprovals` helper |
 | 4–5 | M1 | Implement `renewPreapproval` call |
 | 6 | M1 | Unit tests and edge cases |
 | 7 | M1 | Upstream PR and docs — **M1 delivery** |
-| 8 | M2 | Design unified history interface and adapter pattern |
-| 9–10 | M2 | Implement unified history interface |
-| 11 | M2 | Per-registry adapters |
-| 12 | M2 | Pagination and integration tests |
+| 8 | M2 | Design metadata-enrichment layer over existing `listHoldingTransactions` |
+| 9–10 | M2 | Implement metadata-enrichment layer |
+| 11 | M2 | Per-registry metadata joins |
+| 12 | M2 | Pagination ergonomics and integration tests |
 | 13 | M2 | Upstream PR and docs — **M2 delivery** |
 | 14–15 | M3 | CIP spec draft and URI builder |
 | 16 | M3 | URI parser implementation |
