@@ -33,7 +33,7 @@ These three gaps are a natural follow-on to the pre-approval work and are best h
 
 ### 3. Architectural Alignment
 
-All three pieces extend the official wallet SDK rather than building a parallel library. None changes the protocol or existing SDK APIs. Pre-approval expiry sits above the existing pre-approval path. Unified history sits above the existing registry read path. Payment request format introduces a new URI scheme but does not touch the ledger. Backward compatible in all three cases.
+All three pieces extend the official wallet SDK rather than building a parallel library. None changes the protocol or existing SDK APIs. Non-default-provider pre-approval lifecycle sits above the existing pre-approval path. Transfer history metadata enrichment sits above the existing, already-unified `listHoldingTransactions` read path. Payment request format introduces a new URI scheme but does not touch the ledger. Backward compatible in all three cases.
 
 ### 4. Backward Compatibility
 
@@ -155,7 +155,7 @@ This is a direct pass-through to the external auditor. Estimated cost: USD 25,00
 ## Acceptance Criteria
 
 - Non-default-provider pre-approval lifecycle (creation, monitoring, renewal, reward accounting, decommissioning) merged into `canton-network/wallet`.
-- Unified history interface and per-registry adapters merged into `canton-network/wallet`.
+- Multi-registry transfer history metadata-enrichment layer merged into `canton-network/wallet`.
 - Payment request format published as a CIP draft; parser and builder merged into `canton-network/wallet`.
 - Reference integration runs end to end against real registry endpoints and is kept green in CI.
 - At least 2 independent wallet teams use the payment request parser and builder.
@@ -247,4 +247,4 @@ The wallet team is building Utility Registry token pre-approvals now. The moment
 
 ## Rationale
 
-The three pieces share the same SDK surface and the same integration tests, so bundling them is more efficient than three separate proposals and easier for the committee to evaluate as a coherent scope. Each piece is independently useful but they are most valuable together — a wallet that can send any token, track its pre-approvals, show a unified history, and accept incoming payment requests has a complete feature set. The payment request format in particular has the most ecosystem leverage because it enables interoperability across any wallet that implements the transfer path, including wallets the committee has no direct visibility into.
+The three pieces share the same SDK surface and the same integration tests, so bundling them is more efficient than three separate proposals and easier for the committee to evaluate as a coherent scope. Each piece is independently useful but they are most valuable together — a wallet that can send any token, manage its own pre-approval provider lifecycle, show an enriched transaction history, and accept incoming payment requests has a complete feature set. The payment request format in particular has the most ecosystem leverage because it enables interoperability across any wallet that implements the transfer path, including wallets the committee has no direct visibility into.
