@@ -44,7 +44,7 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 ## Milestones and Deliverables
 
 ### Milestone 1 — Non-Default-Provider Pre-Approval Lifecycle
-- **Duration:** Weeks 1–10
+- **Duration:** Weeks 1–8
 - **Deliverables:** Full self-provider lifecycle (creation, monitoring, renewal, decommissioning) for non-default-provider Canton Coin pre-approvals in the SDK token namespace; app-reward accounting; renewal fee tracking; bulk operations for exchanges; monitoring/alerting hooks; renewal failure handling with retry/backoff; unit tests; upstream pull request to `canton-network/wallet`.
 
 | Task | Hours |
@@ -67,7 +67,7 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 ---
 
 ### Milestone 2 — Multi-Registry Transfer History Enrichment
-- **Duration:** Weeks 11–16
+- **Duration:** Weeks 8–14
 - **Deliverables:** Convenience layer joining the existing registry-agnostic `listHoldingTransactions` stream with per-registry instrument metadata (symbol, display name) via `registriesToAssets`; consistent cursor pagination on top of ledger offsets; upstream pull request.
 
 | Task | Hours |
@@ -84,7 +84,7 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 ---
 
 ### Milestone 3 — Payment Request Format and Reference Integration
-- **Duration:** Weeks 17–22
+- **Duration:** Weeks 14–20
 - **Deliverables:** Canton payment URI spec published as a CIP draft; parser and builder in the SDK; upstream pull request; reference integration running end to end in CI.
 
 | Task | Hours |
@@ -102,13 +102,13 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 ---
 
 ### Milestone 4a — External Auditor Fee (Pass-Through)
-- **Duration:** Weeks 23–26
+- **Duration:** Weeks 20–23
 - **Deliverables:** Engagement of an independent third-party security firm to audit all SDK additions; published audit report.
 
 This is a direct pass-through to the external auditor. Estimated cost: USD 25,000–30,000, billed in CC at spot rate at time of engagement. This line is not development time — it is the auditor's fee paid to a firm outside this proposal.
 
 ### Milestone 4b — Developer Remediation
-- **Duration:** Weeks 23–26 (concurrent with audit)
+- **Duration:** Weeks 20–23 (concurrent with audit)
 - **Deliverables:** Remediation of all critical and high findings; re-test sign-off with auditor.
 
 | Task | Hours |
@@ -128,25 +128,27 @@ This is a direct pass-through to the external auditor. Estimated cost: USD 25,00
 |---|---|---|
 | 1 | M1 | Research non-default-provider setup and app-reward mechanics |
 | 2–3 | M1 | Implement pre-approval creation flow and `getExpiringPreapprovals` helper |
-| 4–5 | M1 | Implement `renewPreapproval` call and decommission/cancel flow |
-| 6–7 | M1 | App-reward accounting and renewal-fee tracking tooling |
-| 8 | M1 | Bulk operations for exchanges (batch create/monitor/renew) |
-| 9 | M1 | Monitoring/alerting hooks and renewal failure handling/retries |
-| 10 | M1 | Unit tests, upstream PR and docs — **M1 delivery** |
-| 11 | M2 | Design metadata-enrichment layer over existing `listHoldingTransactions` |
-| 12–13 | M2 | Implement metadata-enrichment layer |
-| 14 | M2 | Per-registry metadata joins |
-| 15 | M2 | Pagination ergonomics and integration tests |
-| 16 | M2 | Upstream PR and docs — **M2 delivery** |
-| 17–18 | M3 | CIP spec draft and URI builder |
-| 19 | M3 | URI parser implementation |
-| 20–21 | M3 | End-to-end reference integration and CI setup |
-| 22 | M3 | Wallet team outreach, upstream PR, docs — **M3 delivery** |
-| 23 | M4 | Audit scope prep and auditor briefing |
-| 24–25 | M4 | Audit execution and remediation |
-| 26 | M4 | Re-test, final report publication — **M4 delivery** |
+| 4 | M1 | Implement `renewPreapproval` call and decommission/cancel flow |
+| 5 | M1 | App-reward accounting and renewal-fee tracking tooling |
+| 6 | M1 | Bulk operations for exchanges (batch create/monitor/renew) |
+| 7 | M1 | Monitoring/alerting hooks and renewal failure handling/retries |
+| 8 | M1 | Unit tests, upstream PR and docs — **M1 delivery** |
+| 8 | M2 | Design metadata-enrichment layer over existing `listHoldingTransactions` |
+| 9–10 | M2 | Implement metadata-enrichment layer |
+| 11 | M2 | Per-registry metadata joins |
+| 12 | M2 | Pagination ergonomics |
+| 13 | M2 | Integration tests |
+| 14 | M2 | Upstream PR and docs — **M2 delivery** |
+| 14–15 | M3 | CIP spec draft and URI builder |
+| 16 | M3 | URI parser implementation |
+| 17–18 | M3 | End-to-end reference integration and CI setup |
+| 19 | M3 | Wallet team outreach and upstream PR |
+| 20 | M3 | Docs and final review — **M3 delivery** |
+| 20 | M4 | Audit scope prep and auditor briefing |
+| 21–22 | M4 | Audit execution and remediation |
+| 23 | M4 | Re-test, final report publication — **M4 delivery** |
 
-**Total project duration:** 26 weeks
+**Total project duration:** 23 weeks
 **Total build hours (M1–M3):** 315h at 2,000 CC/h
 **Total remediation hours (M4b):** 40h at 2,000 CC/h
 
