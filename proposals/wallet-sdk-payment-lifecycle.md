@@ -9,7 +9,7 @@
 
 ## Abstract
 
-The wallet SDK can now send Utility Registry tokens (pre-approval work currently in progress). Three practical problems remain once that lands: the SDK already lets a caller create, renew, and cancel a Canton Coin pre-approval with itself as provider, the deliberate choice any provider makes to capture the app reward on incoming transfers, but there is no support for operating that choice at scale (bulk monitoring, retry-safe renewal) or for claiming the reward coupons it earns before they expire each mining round; the existing unified transaction-history read path lacks per-registry symbol/metadata enrichment; and there is no standard way for one Canton wallet to request a payment from another. This proposal addresses all three as a single coherent scope, the lifecycle around a token transfer, not just the transfer itself.
+The wallet SDK can now send Utility Registry tokens (pre-approval work currently in progress). Three practical problems remain once that lands: the SDK already lets a caller create, renew, and cancel a Canton Coin pre-approval with itself as provider, but there is no support for operating that choice at scale (bulk monitoring, retry-safe renewal); the existing unified transaction-history read path lacks per-registry symbol/metadata enrichment; and there is no standard way for one Canton wallet to request a payment from another. This proposal addresses all three as a single coherent scope, the lifecycle around a token transfer, not just the transfer itself.
 
 ---
 
@@ -17,23 +17,25 @@ The wallet SDK can now send Utility Registry tokens (pre-approval work currently
 
 ### 1. Objective
 
-The work in progress on Utility Registry token pre-approvals closes the send gap. It does not close the gaps around sending. Default-provider (validator operator) Canton Coin pre-approvals already auto-renew via validator-app automation, and Utility Registry (CIP56) pre-approvals have no expiry at all, so neither of those needs renewal tooling. Wallets and exchanges that choose to be their own provider party on a Canton Coin pre-approval, a deliberate choice made specifically to capture the app reward on incoming transfers, already have the primitives for it: the SDK's pre-approval namespace ships `create` (with a caller-supplied provider party), `renew`, `cancel`, and a `fetchStatus` poller. What's missing sits one layer up. `fetchStatus` checks one receiver party at a time, so there is no way to scan everything a caller manages for pre-approvals nearing expiry, and nothing retries a renewal that fails partway. More significantly, a non-default provider earns `AppRewardCoupon`s on every incoming transfer, and those coupons mint each mining round (about ten minutes) and are permanently lost if not redeemed that round. Validator automation only mints on behalf of locally hosted parties; an external party gets nothing automatic. Today there is no SDK method to query accrued reward coupons or to redeem them via `AmuletRules_Transfer`, and the wallet team's own docs mark this gap explicitly, three separate `.. todo add code example once we have this in the wallet SDK` notes next to reward redemption, activity markers, and beneficiary sharing, and a repository-wide search turns up no reference to reward coupons anywhere in the SDK source. Separately, the SDK's `listHoldingTransactions` already returns a registry-agnostic transaction history in one call, but it doesn't carry human-readable per-registry instrument metadata (symbol, display name) alongside it, so a caller still has to fetch that separately per registry and join it by hand. And when a merchant or dApp wants to ask a user to send a specific token, there is no Canton equivalent of a payment URI, every app invents a format, so wallets cannot interoperate on incoming payment requests.
+The work in progress on Utility Registry token pre-approvals closes the send gap. It does not close the gaps around sending. Default-provider (validator operator) Canton Coin pre-approvals already auto-renew via validator-app automation, and Utility Registry (CIP56) pre-approvals have no expiry at all, so neither of those needs renewal tooling. Wallets and exchanges that choose to be their own provider party on a Canton Coin pre-approval already have the primitives for it: the SDK's pre-approval namespace ships `create` (with a caller-supplied provider party), `renew`, `cancel`, and a `fetchStatus` poller. What's missing sits one layer up. `fetchStatus` checks one receiver party at a time, so there is no way to scan everything a caller manages for pre-approvals nearing expiry, and nothing retries a renewal that fails partway, and nothing operates that at the batch scale an exchange running many external parties needs. Separately, the SDK's `listHoldingTransactions` already returns a registry-agnostic transaction history in one call, but it doesn't carry human-readable per-registry instrument metadata (symbol, display name) alongside it, so a caller still has to fetch that separately per registry and join it by hand. And when a merchant or dApp wants to ask a user to send a specific token, there is no Canton equivalent of a payment URI, every app invents a format, so wallets cannot interoperate on incoming payment requests.
+
+A prior draft of this milestone also scoped in tracking and redemption of the `AppRewardCoupon`s a non-default provider earns. That mechanism is being replaced by CIP-0104 (Approved), whose Increment 4 (targeted for MainNet in August 2026) removes `AppRewardCoupon` and `FeaturedAppActivityMarker` creation entirely and moves reward eligibility to parties holding an active `FeaturedAppRight` acting as transaction confirmers — being named provider on a pre-approval alone will no longer generate any reward. Since Featured App status requires a separate DSO governance vote and CC collateral disproportionate to this proposal's scope, reward-coupon tracking and redemption are dropped from this milestone rather than rebuilt against a mechanism being sunset.
 
 These three gaps are a natural follow-on to the pre-approval work and are best handled together, because they share the same SDK surface area and the same integration tests.
 
 ### 2. Implementation Mechanics
 
-**Non-default-provider pre-approval orchestration and reward-coupon redemption.** The SDK already supports creating, renewing, and cancelling a Canton Coin pre-approval with a caller-chosen provider party (`sdk.amulet.preapproval.command.create`, `.renew`, `.cancel`, `.fetchStatus`). This proposal builds the operational layer on top that wallets and exchanges actually need: a `getExpiringPreapprovals(withinDays)` helper that scans every pre-approval a caller manages, since `fetchStatus` today only checks one party at a time, and scheduled renewal with retry/backoff so a transient failure does not silently drop a pre-approval. It also adds what has no SDK support at all today: visibility into and redemption of the app rewards a non-default provider earns. Reward coupons mint every mining round, about ten minutes, and are permanently lost if not redeemed that round, and the SDK currently has no method to query them or to submit the `AmuletRules_Transfer` that redeems them for an external party. This proposal adds `getUnredeemedRewardCoupons` and an automated `redeemRewardCoupons` call with retry handling, batch operations for exchanges managing many external parties, and monitoring/alerting hooks so a wallet team can see expiry and redemption state without polling manually. No new protocol; no new contracts. This does not touch default-provider Canton Coin pre-approvals (already auto-renewed by validator-app automation) or Utility Registry pre-approvals (no expiry, nothing to renew).
+**Non-default-provider pre-approval orchestration.** The SDK already supports creating, renewing, and cancelling a Canton Coin pre-approval with a caller-chosen provider party (`sdk.amulet.preapproval.command.create`, `.renew`, `.cancel`, `.fetchStatus`). This proposal builds the operational layer on top that wallets and exchanges actually need: a `getExpiringPreapprovals(withinDays)` helper that scans every pre-approval a caller manages, since `fetchStatus` today only checks one party at a time; scheduled renewal with retry/backoff so a transient failure does not silently drop a pre-approval; and batch monitor/renew operations for exchanges managing many external parties at once, plus monitoring/alerting hooks so a wallet team can see expiry state without polling manually. No new protocol; no new contracts. This does not touch default-provider Canton Coin pre-approvals (already auto-renewed by validator-app automation) or Utility Registry pre-approvals (no expiry, nothing to renew).
 
 **Multi-registry transfer history enrichment.** `listHoldingTransactions` already reads at the ledger's standardized Token Standard interface level, so it returns a registry-agnostic transaction history in one call, with `instrumentId` per line item and amounts as fixed-point Daml decimals — no per-registry decimal conversion needed. This proposal adds a convenience layer that joins that already-unified stream with per-registry instrument metadata (symbol, display name) fetched via the existing `registriesToAssets` helper, and wraps it with consistent cursor pagination on top of ledger offsets. A caller gets one enriched list regardless of how many registries a user holds tokens in, without hand-joining metadata calls themselves.
 
 **Payment request format.** Define a Canton payment URI format and ship a parser and builder in the SDK. The URI encodes receiver party ID, registry ID, instrument ID, amount, and optional fields (memo, expiry, nonce). Example: `canton:PARTY_ID?registry=REGISTRY_ID&instrument=INSTRUMENT_ID&amount=10.00&memo=invoice-42`. The builder accepts a token type, amount, and party and returns a valid URI. The parser returns a structured object that feeds directly into the transfer path. The spec is published as a short Canton Improvement Proposal.
 
-**Upstream contribution and reference integration.** All three pieces are contributed as pull requests to `canton-network/wallet`, matching the repository's code style and test conventions. A reference integration runs end to end against real registry endpoints: create a non-default-provider Canton Coin pre-approval, watch it approach expiry, renew it, redeem the app reward coupons it earned, send a Utility Registry token via a parsed payment request, and verify the transfer appears in the unified history. Kept green in CI.
+**Upstream contribution and reference integration.** All three pieces are contributed as pull requests to `canton-network/wallet`, matching the repository's code style and test conventions. A reference integration runs end to end against real registry endpoints: create a non-default-provider Canton Coin pre-approval, watch it approach expiry, renew it, send a Utility Registry token via a parsed payment request, and verify the transfer appears in the unified history. Kept green in CI.
 
 ### 3. Architectural Alignment
 
-All three pieces extend the official wallet SDK rather than building a parallel library. None changes the protocol or existing SDK APIs. Non-default-provider pre-approval orchestration and reward-coupon redemption sit above the existing pre-approval and reward primitives. Transfer history metadata enrichment sits above the existing, already-unified `listHoldingTransactions` read path. Payment request format introduces a new URI scheme but does not touch the ledger. Backward compatible in all three cases.
+All three pieces extend the official wallet SDK rather than building a parallel library. None changes the protocol or existing SDK APIs. Non-default-provider pre-approval orchestration sits above the existing pre-approval primitives. Transfer history metadata enrichment sits above the existing, already-unified `listHoldingTransactions` read path. Payment request format introduces a new URI scheme but does not touch the ledger. Backward compatible in all three cases.
 
 ### 4. Backward Compatibility
 
@@ -43,28 +45,26 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 
 ## Milestones and Deliverables
 
-### Milestone 1 — Non-Default-Provider Pre-Approval Orchestration and Reward-Coupon Redemption
-- **Duration:** Weeks 1–8
-- **Deliverables:** Bulk monitoring and retry-safe renewal orchestration on top of the SDK's existing create/renew/cancel pre-approval primitives; `getExpiringPreapprovals(withinDays)` and `getUnredeemedRewardCoupons` query helpers; automated `redeemRewardCoupons` call for external parties; batch operations for exchanges; monitoring/alerting hooks; unit tests; upstream pull request to `canton-network/wallet`.
+### Milestone 1 — Non-Default-Provider Pre-Approval Orchestration
+- **Duration:** Weeks 1–5
+- **Deliverables:** Bulk monitoring and retry-safe renewal orchestration on top of the SDK's existing create/renew/cancel pre-approval primitives; `getExpiringPreapprovals(withinDays)` query helper; batch monitor/renew operations for exchanges; expiry monitoring/alerting hooks; unit tests; upstream pull request to `canton-network/wallet`.
 
 | Task | Hours |
 |---|---|
-| Research non-default-provider setup, existing create/renew/cancel primitives, and app-reward mechanics | 8h |
+| Research non-default-provider setup and existing create/renew/cancel primitives | 6h |
 | Implement `getExpiringPreapprovals(withinDays)` bulk-scan helper across all pre-approvals a caller manages | 10h |
 | Implement scheduled renewal orchestration on top of the existing `renew()` call, with retry/backoff | 12h |
-| Implement `getUnredeemedRewardCoupons` query for external-party reward coupons | 14h |
-| Implement automated `redeemRewardCoupons` call (`AmuletRules_Transfer`) with retry handling | 20h |
-| Bulk operations (batch monitor/renew/redeem) for exchanges managing many parties | 14h |
-| Monitoring/alerting hooks (metrics/webhooks) for expiry and redemption state | 10h |
-| Unit tests and edge case coverage | 14h |
+| Bulk operations (batch monitor/renew) for exchanges managing many parties | 10h |
+| Monitoring/alerting hooks (metrics/webhooks) for pre-approval expiry state | 7h |
+| Unit tests and edge case coverage | 9h |
 | Upstream PR preparation and review cycles | 10h |
-| Documentation and inline examples | 8h |
-| **Milestone 1 Total** | **120h** |
+| Documentation and inline examples | 6h |
+| **Milestone 1 Total** | **70h** |
 
 ---
 
 ### Milestone 2 — Multi-Registry Transfer History Enrichment
-- **Duration:** Weeks 8–14
+- **Duration:** Weeks 5–11
 - **Deliverables:** Convenience layer joining the existing registry-agnostic `listHoldingTransactions` stream with per-registry instrument metadata (symbol, display name) via `registriesToAssets`; consistent cursor pagination on top of ledger offsets; upstream pull request.
 
 | Task | Hours |
@@ -81,7 +81,7 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 ---
 
 ### Milestone 3 — Payment Request Format and Reference Integration
-- **Duration:** Weeks 14–20
+- **Duration:** Weeks 11–17
 - **Deliverables:** Canton payment URI spec published as a CIP draft; parser and builder in the SDK; upstream pull request; reference integration running end to end in CI.
 
 | Task | Hours |
@@ -99,13 +99,13 @@ Additive only. No changes to existing SDK APIs, on-ledger contracts, or runtime 
 ---
 
 ### Milestone 4a — External Auditor Fee (Pass-Through)
-- **Duration:** Weeks 20–23
+- **Duration:** Weeks 17–20
 - **Deliverables:** Engagement of an independent third-party security firm to audit all SDK additions; published audit report.
 
 This is a direct pass-through to the external auditor. Estimated cost: USD 25,000–30,000, billed in CC at spot rate at time of engagement. This line is not development time — it is the auditor's fee paid to a firm outside this proposal.
 
 ### Milestone 4b — Developer Remediation
-- **Duration:** Weeks 20–23 (concurrent with audit)
+- **Duration:** Weeks 17–20 (concurrent with audit)
 - **Deliverables:** Remediation of all critical and high findings; re-test sign-off with auditor.
 
 | Task | Hours |
@@ -123,36 +123,35 @@ This is a direct pass-through to the external auditor. Estimated cost: USD 25,00
 
 | Week | Milestone | Focus |
 |---|---|---|
-| 1 | M1 | Research existing pre-approval primitives and app-reward mechanics |
-| 2–3 | M1 | Implement `getExpiringPreapprovals` bulk-scan helper and renewal orchestration with retry/backoff |
-| 4–5 | M1 | Implement `getUnredeemedRewardCoupons` query and automated `redeemRewardCoupons` call |
-| 6 | M1 | Bulk operations for exchanges (batch monitor/renew/redeem) |
-| 7 | M1 | Monitoring/alerting hooks |
-| 8 | M1 | Unit tests, upstream PR and docs — **M1 delivery** |
-| 8 | M2 | Design metadata-enrichment layer over existing `listHoldingTransactions` |
-| 9–10 | M2 | Implement metadata-enrichment layer |
-| 11 | M2 | Per-registry metadata joins |
-| 12 | M2 | Pagination ergonomics |
-| 13 | M2 | Integration tests |
-| 14 | M2 | Upstream PR and docs — **M2 delivery** |
-| 14–15 | M3 | CIP spec draft and URI builder |
-| 16 | M3 | URI parser implementation |
-| 17–18 | M3 | End-to-end reference integration and CI setup |
-| 19 | M3 | Wallet team outreach and upstream PR |
-| 20 | M3 | Docs and final review — **M3 delivery** |
-| 20 | M4 | Audit scope prep and auditor briefing |
-| 21–22 | M4 | Audit execution and remediation |
-| 23 | M4 | Re-test, final report publication — **M4 delivery** |
+| 1 | M1 | Research existing pre-approval primitives |
+| 2 | M1 | Implement `getExpiringPreapprovals` bulk-scan helper and renewal orchestration with retry/backoff |
+| 3 | M1 | Bulk operations for exchanges (batch monitor/renew) |
+| 4 | M1 | Monitoring/alerting hooks (expiry state) |
+| 5 | M1 | Unit tests, upstream PR and docs — **M1 delivery** |
+| 5 | M2 | Design metadata-enrichment layer over existing `listHoldingTransactions` |
+| 6–7 | M2 | Implement metadata-enrichment layer |
+| 8 | M2 | Per-registry metadata joins |
+| 9 | M2 | Pagination ergonomics |
+| 10 | M2 | Integration tests |
+| 11 | M2 | Upstream PR and docs — **M2 delivery** |
+| 11–12 | M3 | CIP spec draft and URI builder |
+| 13 | M3 | URI parser implementation |
+| 14–15 | M3 | End-to-end reference integration and CI setup |
+| 16 | M3 | Wallet team outreach and upstream PR |
+| 17 | M3 | Docs and final review — **M3 delivery** |
+| 17 | M4 | Audit scope prep and auditor briefing |
+| 18–19 | M4 | Audit execution and remediation |
+| 20 | M4 | Re-test, final report publication — **M4 delivery** |
 
-**Total project duration:** 23 weeks
-**Total build hours (M1–M3):** 315h at 2,000 CC/h
+**Total project duration:** 20 weeks
+**Total build hours (M1–M3):** 265h at 2,000 CC/h
 **Total remediation hours (M4b):** 40h at 2,000 CC/h
 
 ---
 
 ## Acceptance Criteria
 
-- Non-default-provider pre-approval monitoring/renewal orchestration and reward-coupon redemption for external parties merged into `canton-network/wallet`.
+- Non-default-provider pre-approval monitoring/renewal orchestration for external parties merged into `canton-network/wallet`.
 - Multi-registry transfer history metadata-enrichment layer merged into `canton-network/wallet`.
 - Payment request format published as a CIP draft; parser and builder merged into `canton-network/wallet`.
 - Reference integration runs end to end against real registry endpoints and is kept green in CI.
@@ -171,10 +170,10 @@ Acceptance is based on real SDK usage, not on artifact delivery alone.
 
 | Milestone | Deliverable | Hours | Rate | CC |
 |---|---|---|---|---|
-| M1 — Non-default-provider pre-approval orchestration and reward-coupon redemption | SDK helpers + upstream PR | 120h | 2,000 CC/h | 240,000 CC |
+| M1 — Non-default-provider pre-approval orchestration | SDK helpers + upstream PR | 70h | 2,000 CC/h | 140,000 CC |
 | M2 — Multi-registry transfer history enrichment | Metadata enrichment + upstream PR | 95h | 2,000 CC/h | 190,000 CC |
 | M3 — Payment request format | CIP + SDK + reference integration | 100h | 2,000 CC/h | 200,000 CC |
-| **Build Total** | | **315h** | | **630,000 CC** |
+| **Build Total** | | **265h** | | **530,000 CC** |
 
 ### Audit Budget (M4 — additional, on top of build)
 
@@ -184,12 +183,12 @@ Acceptance is based on real SDK usage, not on artifact delivery alone.
 | M4b — Developer remediation | 40h × 2,000 CC/h | 80,000 CC |
 | **Audit Total** | | **80,000 CC + auditor fee** |
 
-**Total Funding Request: 710,000 CC + auditor pass-through**
+**Total Funding Request: 610,000 CC + auditor pass-through**
 
 Payment for each milestone is triggered upon committee acceptance of that milestone's deliverables.
 
 ### Note on Audit Cost
-The Canton Foundation has covered external audit costs for wallet-critical proposals in the past and is welcome to do so here as well. If the Foundation prefers to fund M4a (the auditor fee) directly rather than as a pass-through, the build budget of 630,000 CC and developer remediation of 80,000 CC remain unchanged.
+The Canton Foundation has covered external audit costs for wallet-critical proposals in the past and is welcome to do so here as well. If the Foundation prefers to fund M4a (the auditor fee) directly rather than as a pass-through, the build budget of 530,000 CC and developer remediation of 80,000 CC remain unchanged.
 
 ### Volatility Stipulation
 Project duration is under 6 months. If the timeline extends beyond 6 months due to committee-requested scope changes, remaining milestones will be renegotiated to account for CC price movement.
@@ -239,10 +238,10 @@ Also worked with GOAT Network, NEAR DevHub, Router Protocol, Oraichain, and Trip
 
 ## Motivation
 
-The wallet team is building Utility Registry token pre-approvals now. The moment that lands, three gaps become the next real problem for wallet teams: any wallet or exchange choosing to run its own provider party on a Canton Coin pre-approval to capture app rewards has no SDK support for operating that choice at scale or for claiming the reward coupons it earns before they expire each mining round, transaction history lacks per-registry metadata enrichment, and there is no interoperability on payment requests. Each gap has been raised in community channels by builders hitting it, and the reward-coupon gap in particular is confirmed by the wallet team's own documentation, which marks it unbuilt in three separate places. Addressing them as a package means the ecosystem gets payment lifecycle completeness once rather than each wallet team solving each piece separately.
+The wallet team is building Utility Registry token pre-approvals now. The moment that lands, three gaps become the next real problem for wallet teams: any wallet or exchange choosing to run its own provider party on a Canton Coin pre-approval has no SDK support for operating that choice at scale, transaction history lacks per-registry metadata enrichment, and there is no interoperability on payment requests. Each gap has been raised in community channels by builders hitting it. Addressing them as a package means the ecosystem gets payment lifecycle completeness once rather than each wallet team solving each piece separately.
 
 ---
 
 ## Rationale
 
-The three pieces share the same SDK surface and the same integration tests, so bundling them is more efficient than three separate proposals and easier for the committee to evaluate as a coherent scope. Each piece is independently useful but they are most valuable together — a wallet that can send any token, operate its own pre-approval provider relationship at scale and claim the rewards it earns, show an enriched transaction history, and accept incoming payment requests has a complete feature set. The payment request format in particular has the most ecosystem leverage because it enables interoperability across any wallet that implements the transfer path, including wallets the committee has no direct visibility into.
+The three pieces share the same SDK surface and the same integration tests, so bundling them is more efficient than three separate proposals and easier for the committee to evaluate as a coherent scope. Each piece is independently useful but they are most valuable together — a wallet that can send any token, operate its own pre-approval provider relationship at scale, show an enriched transaction history, and accept incoming payment requests has a complete feature set. The payment request format in particular has the most ecosystem leverage because it enables interoperability across any wallet that implements the transfer path, including wallets the committee has no direct visibility into.
