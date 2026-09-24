@@ -1,11 +1,11 @@
 ## Development Fund Proposal
 
 **Author:** Ayush Singh (Individual contributor, ayushsinghmi711@gmail.com)
-**Status:** Draft — seeking champion
+**Status:** Draft — awaiting champion confirmation
 **Created:** 2026-06-11
 **Updated:** 2026-09-25
 **Label:** wallet-apps
-**Champion:** Seeking — Wallet Apps SIG / Digital Asset (outreach in progress to @joel-da, @mjuchli-da, @PHOL-DA on PR #466)
+**Champion:** TBD (Tech & Ops Committee — Wallet Apps SIG outreach in progress, see PR #466)
 **Aligns with RFP #14 (Wallet and dApp Integration Tooling) and RFP #13 (Payments and DeFi)** — see [Alignment with Canton Development Fund Priorities](#alignment-with-canton-development-fund-priorities) below.
 
 ---
